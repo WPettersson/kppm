@@ -147,7 +147,6 @@ int main(int argc, char* argv[]) {
           }
         }
         if (hasAllOthers && doesntHaveObj) {
-          std::cout << "Adding " << *other << " as a pre-req for " << *here << std::endl;
           here->addPreReq(other);
           other->addNextLevel(here);
         }

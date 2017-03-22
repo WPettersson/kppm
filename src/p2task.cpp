@@ -44,6 +44,7 @@ int P2Task::solve(Env & e, Problem & p, int * result, double * rhs) {
     CPXwriteprob(e.env, e.lp, "test.lp", "LP");
     /* solve for current objective*/
     status = CPXXmipopt (e.env, e.lp);
+    ipcount++;
     if (status) {
       std::cerr << "Failed to optimize LP." << std::endl;
     }
@@ -63,6 +64,7 @@ int P2Task::solve(Env & e, Problem & p, int * result, double * rhs) {
       }
       CPXXsetdblparam(e.env, CPXPARAM_MIP_Tolerances_MIPGap, p.mip_tolerance);
       status = CPXmipopt (e.env, e.lp);
+      ipcount++;
       solnstat = CPXgetstat (e.env, e.lp);
       if ((solnstat == CPXMIP_INFEASIBLE) || (solnstat == CPXMIP_INForUNBD)) {
         break;
@@ -135,7 +137,9 @@ int P2Task::solve(Env & e, Problem & p, int * result, double * rhs) {
 
 Status P2Task::operator()() {
   status_ = RUNNING;
+#ifdef DEBUG
   std::cout << details();
+#endif
   Env e;
   gatherSolutions();
 
