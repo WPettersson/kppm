@@ -236,8 +236,8 @@ Status P2Task::operator()() {
   /* Need to add a result to the list here*/
   s.insert(rhs, result, solnstat == CPXMIP_INFEASIBLE);
   // Note that if we are splitting, we aren't sharing.
-  min = new int[objCount_];
-  max = new int[objCount_];
+  min = new int[objCountTotal_];
+  max = new int[objCountTotal_];
 
 
   if (solnstat != CPXMIP_INFEASIBLE) {

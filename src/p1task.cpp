@@ -31,8 +31,8 @@ Status P1Task::operator()() {
     for (int b = 0; b < numBlocks; ++b) {
       int temp = b;
       double ** bounds = new double*[2];
-      bounds[0] = new double[dim];
-      bounds[1] = new double[dim];
+      bounds[0] = new double[objCount_];
+      bounds[1] = new double[objCount_];
       for (int d = 1; d < objCount_; ++d) {
         int o = objectives_[d];
         double max = -INF;
