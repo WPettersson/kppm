@@ -1,13 +1,13 @@
 SRC = ./src
-#TARGETDIR = ./build
-TARGETDIR = ./debug
-DEBUG_FLAGS = -g -DDEBUG
+TARGETDIR = ./build
+#TARGETDIR = ./debug
+#DEBUG_FLAGS = -g -DDEBUG
 
 # Extra debugging flags.
 # -DDEBUG_SOLUTION_SEARCH
 # -DDEBUG_SYNC
 CPLEXDIR=/home/enigma/opt/ibm/ILOG/CPLEX_Studio127
-CXX = clang++ #g++
+CXX = g++
 CFLAGS = $(DEBUG_FLAGS) -Wextra -std=c++11 -pedantic -I$(CPLEXDIR)/cplex/include/
 CLNFLAGS = -L$(CPLEXDIR)/cplex/lib/x86-64_linux/static_pic/
 LIBS=-pthread -lcplex -lboost_program_options
