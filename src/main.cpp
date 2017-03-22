@@ -182,7 +182,7 @@ int main(int argc, char* argv[]) {
   constexpr int width = 8;
   constexpr int precision = 3;
   outFile.open(outputFilename);
-  outFile << "Using k-PPM at " << HASH << std::endl;
+  outFile << std::endl << "Using k-PPM at " << HASH << std::endl;
   g->cleanSolutions();
   g->dumpSolutions(outFile);
   outFile << std::endl << "---" << std::endl;
