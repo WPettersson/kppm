@@ -241,11 +241,10 @@ Status P2Task::operator()() {
 
 
   if (solnstat != CPXMIP_INFEASIBLE) {
-    for (int j = 0; j < objCount_; j++) {
+    for (int j = 0; j < objCountTotal_; j++) {
       min[j] = max[j] = result[j];
     }
   }
-
   for (int objective_counter = 1; objective_counter < objCount_; objective_counter++) {
     int objective = objectives_[objective_counter];
     int depth_level = 1; /* Track current "recursion" depth */
@@ -367,13 +366,13 @@ Status P2Task::operator()() {
         infcnt = 0;
         inflast = false;
         /* Update maxima */
-        for (int j = 0; j < objCount_; j++) {
+        for (int j = 0; j < objCountTotal_; j++) {
           if (result[j] > max[j]) {
             max[j] = result[j];
           }
         }
         /* Update minima */
-        for (int j = 0; j < objCount_; j++) {
+        for (int j = 0; j < objCountTotal_; j++) {
           if (result[j] < min[j]) {
             min[j] = result[j];
           }
@@ -382,7 +381,7 @@ Status P2Task::operator()() {
 
       if (infeasible && (infcnt == objective_counter-1)) {
         /* Set all constraints back to infinity */
-        for (int j = 0; j < objCount_; j++) {
+        for (int j = 0; j < objCountTotal_; j++) {
           if (j < infcnt) {
             if (sense == MIN) {
               rhs[j] = CPX_INFBOUND;
@@ -412,7 +411,7 @@ Status P2Task::operator()() {
         } else {
           rhs[depth] = -CPX_INFBOUND;
         }
-        depth++;
+        depth_level++;
         depth = objectives_[depth_level];
         if (sense == MIN) {
           rhs[depth] = max[depth]-1;
