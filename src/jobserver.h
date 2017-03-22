@@ -80,6 +80,7 @@ inline JobServer::JobServer(size_t threads) : stop(false) {
               for(auto p: waiting) {
                 if (p.first()) {
                   this->ready.push(p.second);
+                  numNewTasks++;
                 }
               }
               auto readyJobs = std::remove_if(waiting.begin(), waiting.end(),
