@@ -9,6 +9,7 @@
 #include "env.h"
 #include "problem.h"
 #include "solutions.h"
+#include "types.h"
 
 extern std::atomic<int> ipcount;
 
@@ -342,20 +343,22 @@ Status P2Task::operator()() {
       debug_mutex.unlock();
 #endif
       // See if we've gone past our boundary
-      if (sense == MIN) {
-        for (int i = 1; i < objCount_; ++i) {
-          int stop = bounds_[0][i];
-          if (rhs[objectives_[i]] < stop) {
-            infeasible = true;
-            break;
+      if (!infeasible) {
+        if (sense == MIN) {
+          for (int i = 1; i < objCount_; ++i) {
+            int stop = bounds_[0][i];
+            if (rhs[objectives_[i]] < stop) {
+              infeasible = true;
+              break;
+            }
           }
-        }
-      } else {
-        for (int i = 1; i < objCount_; ++i) {
-          int stop = bounds_[1][i];
-          if (rhs[objectives_[i]] > stop) {
-            infeasible = true;
-            break;
+        } else {
+          for (int i = 1; i < objCount_; ++i) {
+            int stop = bounds_[1][i];
+            if (rhs[objectives_[i]] > stop) {
+              infeasible = true;
+              break;
+            }
           }
         }
       }
@@ -382,23 +385,53 @@ Status P2Task::operator()() {
       if (infeasible && (infcnt == objective_counter-1)) {
         /* Set all constraints back to infinity */
         for (int j = 0; j < objCountTotal_; j++) {
-          if (j < infcnt) {
-            if (sense == MIN) {
-              rhs[j] = CPX_INFBOUND;
-            } else {
-              rhs[j] = -CPX_INFBOUND;
-            }
+          if (sense == MIN) {
+            rhs[j] = CPX_INFBOUND;
+          } else {
+            rhs[j] = -CPX_INFBOUND;
+          }
+        }
+        // Reset to start point, not to infinity, if we know the start point!
+        for(int i = 1; i < objCount_; ++i) {
+          if (sense == MIN) {
+            rhs[objectives_[i]] = bounds_[1][i];
+          } else {
+            rhs[objectives_[i]] = bounds_[0][i];
           }
         }
         /* In the case of a minimisation problem
          * set current level to max objective function value  -1 else set
          * current level to min objective function value  +1 */
         if (sense == MIN) {
-          rhs[objective] = max[objective]-1;
-          max[objective] = (int) -CPX_INFBOUND;
+          if (max[objective] > (int) -CPX_INFBOUND) {
+            int start = (int)INF;
+            for(int i = 0; i < objCount_; ++i) {
+              if (objectives_[i] == objective) {
+                start = bounds_[1][i];
+              }
+            }
+            if (start < max[objective]-1) {
+              rhs[objective] = start;
+            } else {
+              rhs[objective] = max[objective]-1;
+            }
+            max[objective] = (int) -CPX_INFBOUND;
+          }
         } else {
-          rhs[objective] = min[objective]+1;
-          min[objective] = (int) CPX_INFBOUND;
+          if (min[objective] < (int) CPX_INFBOUND) {
+            int start = -(int)INF;
+            for(int i = 0; i < objCount_; ++i) {
+              if (objectives_[i] == objective) {
+                start = bounds_[0][i];
+              }
+            }
+            if (start > min[objective]+1) {
+              rhs[objective] = start;
+            } else {
+              rhs[objective] = min[objective]+1;
+            }
+            min[objective] = (int) CPX_INFBOUND;
+          }
         }
 
         /* Reset depth */
@@ -410,6 +443,16 @@ Status P2Task::operator()() {
           rhs[depth] = CPX_INFBOUND;
         } else {
           rhs[depth] = -CPX_INFBOUND;
+        }
+        // Reset to start point, not to infinity, if we know the start point!
+        for(int i = 1; i < objCount_; ++i) {
+          if (objectives_[i] == depth) {
+            if (sense == MIN) {
+              rhs[depth] = bounds_[1][i];
+            } else {
+              rhs[depth] = bounds_[0][i];
+            }
+          }
         }
         depth_level++;
         depth = objectives_[depth_level];
