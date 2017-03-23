@@ -42,7 +42,6 @@ int P2Task::solve(Env & e, Problem & p, int * result, double * rhs) {
       std::cerr << "Failed to change constraint srhs" << std::endl;
     }
 
-    CPXwriteprob(e.env, e.lp, "test.lp", "LP");
     /* solve for current objective*/
     status = CPXXmipopt (e.env, e.lp);
     ipcount++;
@@ -79,55 +78,18 @@ int P2Task::solve(Env & e, Problem & p, int * result, double * rhs) {
     result[j] = srhs[j] = round(objval);
   }
 
-  // Now run through the rest of the objectives. We don't care which is
-  // optimised first, just that we have "some" value for each.
+  // Get the solution vector
+  double * soln = new double[cur_numcols];
+  CPXgetx(e.env, e.lp, soln, 0, cur_numcols - 1);
+  // Now run through the rest of the objectives.
   for (int j = 0; j < p.objcnt; j++) {
     if (objectives_done[j])
       continue;
-    status = CPXXchgobj(e.env, e.lp, cur_numcols, p.objind[j], p.objcoef[j]);
-    if (status) {
-      std::cerr << "Failed to set objective." << std::endl;
+    double res = 0;
+    for(int i = 0; i < cur_numcols; ++i) {
+      res += p.objcoef[j][i] * soln[i];
     }
-
-    status = CPXXchgrhs (e.env, e.lp, p.objcnt, p.conind, srhs);
-    if (status) {
-      std::cerr << "Failed to change constraint srhs" << std::endl;
-    }
-
-    /* solve for current objective*/
-    status = CPXXmipopt (e.env, e.lp);
-    ipcount++;
-    if (status) {
-      std::cerr << "Failed to optimize LP." << std::endl;
-    }
-
-    solnstat = CPXgetstat (e.env, e.lp);
-    if ((solnstat == CPXMIP_INFEASIBLE) || (solnstat == CPXMIP_INForUNBD)) {
-       break;
-    }
-    status = CPXXgetobjval (e.env, e.lp, &objval);
-    if ( status ) {
-      std::cerr << "Failed to obtain objective value." << std::endl;
-      exit(0);
-    }
-    if ( objval > 1/p.mip_tolerance ) {
-      while (objval > 1/p.mip_tolerance) {
-        p.mip_tolerance /= 10;
-      }
-      CPXXsetdblparam(e.env, CPXPARAM_MIP_Tolerances_MIPGap, p.mip_tolerance);
-      status = CPXmipopt (e.env, e.lp);
-      ipcount++;
-      solnstat = CPXgetstat (e.env, e.lp);
-      if ((solnstat == CPXMIP_INFEASIBLE) || (solnstat == CPXMIP_INForUNBD)) {
-        break;
-      }
-      status = CPXXgetobjval (e.env, e.lp, &objval);
-      if ( status ) {
-        std::cerr << "Failed to obtain objective value." << std::endl;
-        exit(0);
-      }
-    }
-    result[j] = srhs[j] = round(objval);
+    result[j] = round(res);
   }
 
   delete[] srhs;
@@ -142,7 +104,6 @@ Status P2Task::operator()() {
   std::cout << details();
 #endif
   Env e;
-  gatherSolutions();
 
   int status;
   /* Initialize the CPLEX environment */
