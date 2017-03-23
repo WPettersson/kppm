@@ -4,6 +4,7 @@
 #include <mutex>
 #include <string>
 
+#include "sense.h"
 #include "task.h"
 #include "jobserver.h"
 
@@ -11,8 +12,8 @@ class P2Task;
 
 class P1Task: public Task {
   public:
-    P1Task(std::string & problem, int objCount, int objCountTotal, int * objectives,
-        int numSteps, JobServer *taskServer);
+    P1Task(std::string & problem, int objCount, int objCountTotal, Sense sense,
+        int * objectives, int numSteps, JobServer *taskServer);
 
     void addNextLevel(Task * nextLevel);
     Status operator()();
@@ -21,6 +22,7 @@ class P1Task: public Task {
     virtual std::string details() const;
 
   private:
+    Sense sense_;
     /**
      * Number of steps to take along each objective dimension when splitting
      * the objective search space. For instance, a 3-objective problem with 2
@@ -29,14 +31,15 @@ class P1Task: public Task {
      */
     int numSteps_;
 
+
     JobServer * taskServer_;
     std::list<Task *> nextLevel_;
 };
 
 inline P1Task::P1Task(std::string & filename, int objCount, int objCountTotal,
-    int * objectives, int numSteps, JobServer *taskServer) :
-    Task(filename, objCount, objCountTotal, objectives), numSteps_(numSteps),
-    taskServer_(taskServer) {
+    Sense sense, int * objectives, int numSteps, JobServer *taskServer) :
+    Task(filename, objCount, objCountTotal, objectives), sense_(sense),
+    numSteps_(numSteps), taskServer_(taskServer) {
 
 }
 

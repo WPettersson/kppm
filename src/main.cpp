@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
         numAdded++;
       }
     }
-    P1Task *t = new P1Task(pFilename, numAdded, p.objcnt, objectives, numSteps, &server);
+    P1Task *t = new P1Task(pFilename, numAdded, p.objcnt, p.objsen, objectives, numSteps, &server);
     allTasks[numAdded-1]->push_back(t);
     addPreReqs.push(t);
   }
