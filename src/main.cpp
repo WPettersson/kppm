@@ -45,6 +45,8 @@ int main(int argc, char* argv[]) {
 
   std::string pFilename, outputFilename;
 
+  int numSteps;
+
   /* Timing */
   clock_t starttime, endtime;
   double cpu_time_used, elapsedtime, startelapsed;
@@ -63,6 +65,9 @@ int main(int argc, char* argv[]) {
     ("threads,t",
       po::value<int>(&num_threads)->default_value(1),
      "Number of threads to use internally. Optional, default to 1.")
+    ("steps",
+      po::value<int>(&numSteps)->default_value(1),
+     "Number of steps to take along each objective function when splitting up the search space. Optional, default to 1.")
   ;
 
   po::store(po::parse_command_line(argc, argv, opt), v);
@@ -102,7 +107,6 @@ int main(int argc, char* argv[]) {
 
   int objCount = p.objcnt;
   JobServer server(num_threads);
-  int numSteps = 3;
   int * objectives = new int[objCount];
   std::vector<std::vector<P1Task *> *> allTasks;
   for(int i = 0; i < objCount; ++i) {
