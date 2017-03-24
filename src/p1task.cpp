@@ -38,7 +38,7 @@ Status P1Task::operator()() {
     bounds[1] = new double[1];
     bounds[0][0] = -INF;
     bounds[1][0] = INF;
-    P2Task * p = new P2Task(bounds, filename_, objCount_, objCountTotal_, objectives_);
+    P2Task * p = new P2Task(bounds, filename_, objCount_, objCountTotal_, objectives_, sense_);
     tasks.push_back(p);
   } else {
     // First calculate absolute max/min values
@@ -99,7 +99,7 @@ Status P1Task::operator()() {
         bounds[1][d] = min + (temp % numSteps_ + 1)*stepSize;
         temp = temp / numSteps_;
       }
-      P2Task * p = new P2Task(bounds, filename_, objCount_, objCountTotal_, objectives_);
+      P2Task * p = new P2Task(bounds, filename_, objCount_, objCountTotal_, objectives_, sense_);
       tasks.push_back(p);
     }
   }

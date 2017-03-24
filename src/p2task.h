@@ -25,7 +25,7 @@ You should have received a copy of the GNU General Public License along with thi
 class P2Task : public Task {
   public:
     P2Task(double **bound, std::string & filename, int objCount,
-        int objCountTotal, int * objectives);
+        int objCountTotal, int * objectives, Sense sense);
     Status operator()();
 
 
@@ -40,8 +40,8 @@ class P2Task : public Task {
 };
 
 inline P2Task::P2Task(double **bound, std::string & filename, int objCount,
-    int objCountTotal, int * objectives) :
-    Task(filename, objCount, objCountTotal, objectives) {
+    int objCountTotal, int * objectives, Sense sense) :
+    Task(filename, objCount, objCountTotal, objectives, sense) {
   bounds_ = new double*[2];
   bounds_[0] = new double[objCount_];
   bounds_[1] = new double[objCount_];

@@ -20,6 +20,8 @@ You should have received a copy of the GNU General Public License along with thi
 #include <string>
 #include <iostream>
 
+#include "sense.h"
+
 /**
  * Status of a task:
  * WAITING - waiting for pre-requisites to complete
@@ -31,13 +33,15 @@ enum Status { WAITING, QUEUED, RUNNING, DONE };
 
 class Task {
   public:
-    Task(std::string filename, int objCount, int objCountTotal, int * objectives);
+    Task(std::string filename, int objCount, int objCountTotal,
+        int * objectives, Sense sense);
     ~Task();
 
     bool isReady() const;
     Status status() const;
     void dumpSolutions(std::ostream & out) const;
     void cleanSolutions();
+    void removeNonPareto();
     int objCount() const;
     int objective(int i) const;
 
@@ -63,11 +67,13 @@ class Task {
     int objCount_;
     int objCountTotal_;
     int * objectives_;
+    Sense sense_;
 
 };
 
-inline Task::Task(std::string filename, int objCount, int objCountTotal, int * objectives) : filename_(filename),
-    objCount_(objCount), objCountTotal_(objCountTotal) {
+inline Task::Task(std::string filename, int objCount, int objCountTotal,
+    int * objectives, Sense sense) : filename_(filename),
+    objCount_(objCount), objCountTotal_(objCountTotal), sense_(sense) {
   objectives_ = new int[objCount_];
   status_ = WAITING;
   for (int i = 0; i < objCount_; ++i) {
@@ -119,6 +125,7 @@ inline void Task::gatherSolutions() {
 inline void Task::cleanSolutions() {
   sortSolutions();
   removeDuplicates();
+  removeNonPareto();
 }
 
 inline void Task::sortSolutions() {
@@ -143,6 +150,29 @@ inline void Task::removeDuplicates() {
             return false;
         }
         return true;
+      }), solutions_.end());
+}
+
+inline void Task::removeNonPareto() {
+  solutions_.erase( std::remove_if(solutions_.begin(), solutions_.end(),
+        [this](int * a) {
+        for(int * b: solutions_) {
+          bool notWorse = true;
+          bool better = false;
+          for(int i = 0; i < this->objCount_ && notWorse; ++i) {
+            if ((sense_ == MIN) && (a[i] > b[i]))
+              notWorse = false;
+            if ((sense_ == MIN) && (a[i] < b[i]))
+              better = true;
+            if ((sense_ == MAX) && (a[i] < b[i]))
+              notWorse = false;
+            if ((sense_ == MAX) && (a[i] > b[i]))
+              better = true;
+          }
+          if (notWorse && better)
+            return true;
+        }
+        return false;
       }), solutions_.end());
 }
 

@@ -20,7 +20,7 @@ You should have received a copy of the GNU General Public License along with thi
 
 class Gather : public Task {
   public:
-    Gather(std::string problem, int objCount, int * objectives);
+    Gather(std::string problem, int objCount, int * objectives, Sense sense);
 
     virtual Status operator()();
 
@@ -30,8 +30,8 @@ class Gather : public Task {
 };
 
 inline Gather::Gather(std::string problem, int objCount,
-    int * objectives) :
-    Task(problem, objCount, objCount, objectives){
+    int * objectives, Sense sense) :
+    Task(problem, objCount, objCount, objectives, sense) {
 }
 
 inline Status Gather::operator()() {

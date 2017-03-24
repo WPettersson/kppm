@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Create final grouping task
-  Task * g = new Gather(pFilename, objCount, objectives);
+  Task * g = new Gather(pFilename, objCount, objectives, p.objsen);
   for(auto t: *allTasks[objCount-1]) {
     t->addNextLevel(g);
     g->addPreReq(t);

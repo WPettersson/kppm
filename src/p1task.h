@@ -35,7 +35,6 @@ class P1Task: public Task {
     virtual std::string details() const;
 
   private:
-    Sense sense_;
     /**
      * Number of steps to take along each objective dimension when splitting
      * the objective search space. For instance, a 3-objective problem with 2
@@ -51,7 +50,7 @@ class P1Task: public Task {
 
 inline P1Task::P1Task(std::string & filename, int objCount, int objCountTotal,
     Sense sense, int * objectives, int numSteps, JobServer *taskServer) :
-    Task(filename, objCount, objCountTotal, objectives), sense_(sense),
+    Task(filename, objCount, objCountTotal, objectives, sense),
     numSteps_(numSteps), taskServer_(taskServer) {
 
 }
