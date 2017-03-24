@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
     ("threads,t",
       po::value<int>(&num_threads)->default_value(1),
      "Number of threads to use internally. Optional, default to 1.")
-    ("steps",
+    ("steps,s",
       po::value<int>(&numSteps)->default_value(1),
      "Number of steps to take along each objective function when splitting up the search space. Optional, default to 1.")
   ;
