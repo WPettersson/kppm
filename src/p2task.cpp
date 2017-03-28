@@ -64,19 +64,22 @@ Status P2Task::operator()() {
 
   Problem p(filename_.c_str(), e);
   int cur_numcols = CPXgetnumcols(e.env, e.lp);
+
+
   // Add our constraints
+  char sense[1];
+  CPXDIM ccnt = 0; // column added count
+  CPXDIM rcnt = 1; // row added count
+  CPXNNZ nzcnt = cur_numcols; // non-zero entries
+  CPXDIM * rmatind = new CPXDIM[cur_numcols];
+  for(int i = 0; i < cur_numcols; ++i) {
+    rmatind[i] = i;
+  }
+  CPXNNZ rmatbeg[1] { 0 };
+  const char* rowName[1];
   for(int d = 1 ; d < objCount_; ++d) {
     int o = objectives_[d];
-    char sense[2] = "G";
-    CPXDIM ccnt = 0; // column added count
-    CPXDIM rcnt = 1; // row added count
-    CPXNNZ nzcnt = cur_numcols; // non-zero entries
-    CPXDIM * rmatind = new CPXDIM[cur_numcols];
-    for(int i = 0; i < cur_numcols; ++i) {
-      rmatind[i] = i;
-    }
-    CPXNNZ rmatbeg[1] { 0 };
-    const char* rowName[1];
+    sense[0] = 'G';
     std::stringstream rowString;
     rowString << "Lower bound on " << o;
     std::string str = rowString.str();
@@ -100,7 +103,7 @@ Status P2Task::operator()() {
         NULL, // colname
         NULL);
   }
-
+  delete[] rmatind;
 #ifdef FINETIMING
   double cplex_time = 0;
   double wait_time = 0;
@@ -116,7 +119,6 @@ Status P2Task::operator()() {
   if (status) {
     std::cerr << "Failed to set objective." << std::endl;
   }
-
 
   /* solve for current objective*/
   status = CPXXmipopt (e.env, e.lp);
@@ -166,7 +168,9 @@ Status P2Task::operator()() {
     }
     sol[j] = round(res);
   }
-
+  delete[] soln;
+  CPXfreeprob(e.env, &e.lp);
+  CPXcloseCPLEX(&e.env);
   int * n = new int[objCountTotal_];
   for (int i = 0; i < objCountTotal_; ++i) {
     n[i] = round(sol[i]);
@@ -185,6 +189,8 @@ Status P2Task::operator()() {
   std::cout << std::endl;
   debug_mutex.unlock();
 #endif
+
+  delete[] sol;
   status_ = DONE;
   return status_;
 }

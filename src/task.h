@@ -39,7 +39,7 @@ class Task {
   public:
     Task(std::string filename, int objCount, int objCountTotal,
         int * objectives, Sense sense);
-    ~Task();
+    virtual ~Task();
 
     bool isReady() const;
     Status status() const;
@@ -89,6 +89,9 @@ inline Task::Task(std::string filename, int objCount, int objCountTotal,
 
 inline Task::~Task() {
   delete[] objectives_;
+  for(int * s: solutions_) {
+    delete[] s;
+  }
 }
 
 inline void Task::addPreReq(Task * t) {

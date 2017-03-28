@@ -27,6 +27,7 @@ class P3Task : public Task {
   public:
     P3Task(Box * b, std::string & filename, int objCount,
         int objCountTotal, int * objectives, Sense sense);
+    ~P3Task();
     Status operator()();
 
 
@@ -49,5 +50,10 @@ inline P3Task::P3Task(Box * b, std::string & filename, int objCount,
   }
 }
 
+inline P3Task::~P3Task() {
+  delete[] bounds_[0];
+  delete[] bounds_[1];
+  delete[] bounds_;
+}
 #endif /* P3TASK_H */
 

@@ -467,6 +467,8 @@ Status P3Task::operator()() {
       }
     }
   }
+  CPXfreeprob(e.env, &e.lp);
+  CPXcloseCPLEX(&e.env);
 #ifdef FINETIMING
   clock_gettime(CLOCK_MONOTONIC, &start);
   total_time = start.tv_sec + start.tv_nsec/1e9 - total_time;

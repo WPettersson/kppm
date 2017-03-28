@@ -66,6 +66,20 @@ Status P1Task::operator()() {
           minOverall[i] = s[o];
       }
     }
+#ifdef DEBUG
+    debug_mutex.lock();
+    std::cout << "Upper: [" << maxOverall[0];
+    for(int i = 1; i < objCount_; ++i) {
+      std::cout << ", " << maxOverall[i];
+    }
+    std::cout << "]" << std::endl;
+    std::cout << "Lower: [" << minOverall[0];
+    for(int i = 1; i < objCount_; ++i) {
+      std::cout << ", " << minOverall[i];
+    }
+    std::cout << "]" << std::endl;
+    debug_mutex.unlock();
+#endif
     for (int b = 0; b < numBlocks; ++b) {
       int temp = b;
       double ** bounds = new double*[2];

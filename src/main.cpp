@@ -190,10 +190,17 @@ int main(int argc, char* argv[]) {
 
   results.push_back(server.q(g));
 
+  delete[] objectives;
   for(auto & jobs: results) {
     jobs.wait();
   }
 
+  for(auto l: allTasks) {
+    for(Task *t: *l) {
+      delete t;
+    }
+    delete l;
+  }
   /* Stop the clock. Sort and print results.*/
   endtime = clock();
   cpu_time_used=((double) (endtime - starttime)) / CLOCKS_PER_SEC;
