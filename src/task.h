@@ -182,17 +182,18 @@ inline void Task::removeNonPareto() {
           bool notWorse = true;
           bool better = false;
           for(int i = 0; i < this->objCount_ && notWorse; ++i) {
-            if ((sense_ == MIN) && (a[i] > b[i]))
-              notWorse = false;
             if ((sense_ == MIN) && (a[i] < b[i]))
-              better = true;
-            if ((sense_ == MAX) && (a[i] < b[i]))
               notWorse = false;
+            if ((sense_ == MIN) && (a[i] > b[i]))
+              better = true;
             if ((sense_ == MAX) && (a[i] > b[i]))
+              notWorse = false;
+            if ((sense_ == MAX) && (a[i] < b[i]))
               better = true;
           }
-          if (notWorse && better)
+          if (notWorse && better) {
             return true;
+          }
         }
         return false;
       }), solutions_.end());
