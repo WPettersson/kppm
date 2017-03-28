@@ -95,18 +95,21 @@ int P3Task::solve(Env & e, Problem & p, int * result, double * rhs) {
     result[j] = srhs[j] = round(objval);
   }
 
-  // Get the solution vector
-  double * soln = new double[cur_numcols];
-  CPXgetx(e.env, e.lp, soln, 0, cur_numcols - 1);
-  // Now run through the rest of the objectives.
-  for (int j = 0; j < p.objcnt; j++) {
-    if (objectives_done[j])
-      continue;
-    double res = 0;
-    for(int i = 0; i < cur_numcols; ++i) {
-      res += p.objcoef[j][i] * soln[i];
+  if ((solnstat != CPXMIP_INFEASIBLE) && (solnstat != CPXMIP_INForUNBD)) {
+    // Get the solution vector
+    double * soln = new double[cur_numcols];
+    CPXgetx(e.env, e.lp, soln, 0, cur_numcols - 1);
+    // Now run through the rest of the objectives.
+    for (int j = 0; j < p.objcnt; j++) {
+      if (objectives_done[j])
+        continue;
+      double res = 0;
+      for(int i = 0; i < cur_numcols; ++i) {
+        res += p.objcoef[j][i] * soln[i];
+      }
+      result[j] = round(res);
     }
-    result[j] = round(res);
+    delete[] soln;
   }
 
   delete[] srhs;
