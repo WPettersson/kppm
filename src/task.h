@@ -22,6 +22,10 @@ You should have received a copy of the GNU General Public License along with thi
 
 #include "sense.h"
 
+#ifdef DEBUG
+extern std::mutex debug_mutex;
+#endif
+
 /**
  * Status of a task:
  * WAITING - waiting for pre-requisites to complete
@@ -97,10 +101,26 @@ inline Status Task::status() const {
 }
 
 inline bool Task::isReady() const {
+#ifdef DEBUG_TASKSERVER
+  debug_mutex.lock();
+  std::cout << "Checking if " << *this << " is ready" << std::endl;
+  debug_mutex.unlock();
+#endif
   for(auto task: preReqs_) {
-    if (task->status() != DONE)
+    if (task->status() != DONE) {
+#ifdef DEBUG_TASKSERVER
+      debug_mutex.lock();
+      std::cout << "Still waiting on " << *task << std::endl;
+      debug_mutex.unlock();
+#endif
       return false;
+    }
   }
+#ifdef DEBUG_TASKSERVER
+  debug_mutex.lock();
+  std::cout << *this << " is ready" << std::endl;
+  debug_mutex.unlock();
+#endif
   return true;
 }
 

@@ -115,7 +115,6 @@ inline JobServer::~JobServer() {
 
 inline auto JobServer::q(Task * t)
     -> std::future<Status> {
-
   auto task = std::make_shared< std::packaged_task<Status()> >(
           std::bind(&Task::operator(), t)
       );

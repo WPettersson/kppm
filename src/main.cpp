@@ -34,6 +34,10 @@ You should have received a copy of the GNU General Public License along with thi
 
 namespace po = boost::program_options;
 
+#ifdef DEBUG
+std::mutex debug_mutex;
+#endif
+
 
 std::atomic<int> ipcount;
 
@@ -113,7 +117,7 @@ int main(int argc, char* argv[]) {
     allTasks.push_back(new std::vector<P1Task *>);
   }
   std::queue<P1Task *> addPreReqs;
-  for(int i = 1; i < 1 << objCount; ++i) {
+  for(int i = 1; i < (1 << objCount); ++i) {
     int numAdded = 0;
     for(int j = 0; j < objCount; ++j) {
       int isInSet = (int) i & 1 << j;

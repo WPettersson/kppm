@@ -35,6 +35,11 @@ inline Gather::Gather(std::string problem, int objCount,
 }
 
 inline Status Gather::operator()() {
+#ifdef DEBUG
+  debug_mutex.lock();
+  std::cout << "Running gather" << std::endl;
+  debug_mutex.unlock();
+#endif
   gatherSolutions();
   return status_;
 }
