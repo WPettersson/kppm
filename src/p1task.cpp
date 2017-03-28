@@ -114,21 +114,19 @@ Status P1Task::operator()() {
       }
       P2Task * p = new P2Task(bounds, filename_, objCount_, objCountTotal_, objectives_, sense_);
       tasks.push_back(p);
-      P3Creator * p3c = new P3Creator(filename_, objCount_, objCountTotal_,
-          objectives_, sense_, taskServer_);
-
-      for (auto n: nextLevel_) {
-        n->addPreReq(p3c);
-        p3c->addNextLevel(n);
-        for(auto t: tasks) {
-          p3c->addPreReq(t);
-        }
-      }
-      for(auto t: tasks) {
-        taskServer_->q(t);
-      }
-      taskServer_->q(p3c);
     }
+    P3Creator * p3c = new P3Creator(filename_, objCount_, objCountTotal_,
+        objectives_, sense_, minOverall, maxOverall, taskServer_);
+    for (auto n: nextLevel_) {
+      n->addPreReq(p3c);
+      p3c->addNextLevel(n);
+    }
+
+    for(auto t: tasks) {
+      p3c->addPreReq(t);
+      taskServer_->q(t);
+    }
+    taskServer_->q(p3c);
   }
   status_ = DONE;
 #ifdef DEBUG
