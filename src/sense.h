@@ -14,6 +14,23 @@ You should have received a copy of the GNU General Public License along with thi
 #ifndef SENSE_H
 #define SENSE_H
 
+#include <iostream>
+
 enum Sense { MIN, MAX };
+
+inline std::ostream & operator<<(std::ostream & str, Sense sense_) {
+  std::string res = "UNKNOWN";
+  switch (sense_) {
+    case MIN:
+      res = "MIN";
+      break;
+    case MAX:
+      res = "MAX";
+      break;
+    default:
+      break;
+  }
+  return str << res;
+}
 
 #endif /* SENSE_H */
