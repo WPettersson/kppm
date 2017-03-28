@@ -71,6 +71,8 @@ class Task {
 
 };
 
+std::ostream & operator<<(std::ostream & str, const Task & t);
+
 inline Task::Task(std::string filename, int objCount, int objCountTotal,
     int * objectives, Sense sense) : filename_(filename),
     objCount_(objCount), objCountTotal_(objCountTotal), sense_(sense) {
@@ -211,7 +213,7 @@ inline std::ostream & operator<<(std::ostream & str, Status status_) {
   return str << res;
 }
 
-inline std::ostream & operator<<(std::ostream & str, Task const & t) {
+inline std::ostream & operator<<(std::ostream & str, const Task & t) {
   return str << t.str();
 }
 

@@ -20,13 +20,19 @@ You should have received a copy of the GNU General Public License along with thi
 #include "types.h"
 #include "p1task.h"
 #include "p2task.h"
+#include "p3creator.h"
 
+#ifdef DEBUG
+extern std::mutex debug_mutex;
+#endif
 
 
 Status P1Task::operator()() {
   status_ = RUNNING;
 #ifdef DEBUG
+  debug_mutex.lock();
   std::cout << "Running " << *this << std::endl;
+  debug_mutex.unlock();
 #endif
   int dim = objCount_ - 1;
   int numBlocks = pow(numSteps_,dim);
@@ -39,11 +45,18 @@ Status P1Task::operator()() {
     bounds[0][0] = -INF;
     bounds[1][0] = INF;
     P2Task * p = new P2Task(bounds, filename_, objCount_, objCountTotal_, objectives_, sense_);
-    tasks.push_back(p);
+    for(auto n: nextLevel_) {
+      n->addPreReq(p);
+    }
+    taskServer_->q(p);
   } else {
     // First calculate absolute max/min values
-    double * maxOverall = new double[objCount_] {-INF};
-    double * minOverall = new double[objCount_] {INF};
+    double * maxOverall = new double[objCount_];
+    double * minOverall = new double[objCount_];
+    for (int i = 0; i < objCount_; ++i) {
+      maxOverall[i] = -INF;
+      minOverall[i] = INF;
+    }
     for (int i = 0; i < objCount_; ++i) {
       int o = objectives_[i];
       for (int *s : solutions()) {
@@ -101,17 +114,28 @@ Status P1Task::operator()() {
       }
       P2Task * p = new P2Task(bounds, filename_, objCount_, objCountTotal_, objectives_, sense_);
       tasks.push_back(p);
+      P3Creator * p3c = new P3Creator(filename_, objCount_, objCountTotal_,
+          objectives_, sense_, taskServer_);
+
+      for (auto n: nextLevel_) {
+        n->addPreReq(p3c);
+        p3c->addNextLevel(n);
+        for(auto t: tasks) {
+          p3c->addPreReq(t);
+        }
+      }
+      for(auto t: tasks) {
+        taskServer_->q(t);
+      }
+      taskServer_->q(p3c);
     }
-  }
-  for (auto n: nextLevel_) {
-    for(auto t: tasks) {
-      n->addPreReq(t);
-    }
-  }
-  for(auto t: tasks) {
-    taskServer_->q(t);
   }
   status_ = DONE;
+#ifdef DEBUG
+  debug_mutex.lock();
+  std::cout << *this << " done." << std::endl;
+  debug_mutex.unlock();
+#endif
   return status_;
 }
 
@@ -129,6 +153,6 @@ std::string P1Task::str() const {
 
 std::string P1Task::details() const {
   std::stringstream ss(str());
-  ss << std::endl << "Task is " << status_ << std::endl;
+  ss << std::endl << "P1Task " << this << " is " << status_ << std::endl;
   return ss.str();
 }

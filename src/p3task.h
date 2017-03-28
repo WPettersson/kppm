@@ -11,20 +11,21 @@ You should have received a copy of the GNU General Public License along with thi
 
 */
 
-#ifndef P2TASK_H
-#define P2TASK_H
+#ifndef P3TASK_H
+#define P3TASK_H
 
 #ifdef DEBUG
 #include <mutex>
 #endif
 
+#include "box.h"
 #include "task.h"
 #include "env.h"
 #include "problem.h"
 
-class P2Task : public Task {
+class P3Task : public Task {
   public:
-    P2Task(double **bound, std::string & filename, int objCount,
+    P3Task(Box * b, std::string & filename, int objCount,
         int objCountTotal, int * objectives, Sense sense);
     Status operator()();
 
@@ -32,21 +33,21 @@ class P2Task : public Task {
     virtual std::string str() const;
     virtual std::string details() const;
   private:
+    int solve(Env & e, Problem & p, int * result, double * rhs);
     double **bounds_;
-    int obj_;
 };
 
-inline P2Task::P2Task(double **bound, std::string & filename, int objCount,
+inline P3Task::P3Task(Box * b, std::string & filename, int objCount,
     int objCountTotal, int * objectives, Sense sense) :
-    Task(filename, objCount, objCountTotal, objectives, sense), obj_(0) {
+    Task(filename, objCount, objCountTotal, objectives, sense) {
   bounds_ = new double*[2];
   bounds_[0] = new double[objCount_];
   bounds_[1] = new double[objCount_];
-  for (int d = 1; d < objCount_; ++d) {
-    bounds_[0][d] = bound[0][d];
-    bounds_[1][d] = bound[1][d];
+  for (int d = 0; d < objCount_; ++d) {
+    bounds_[0][d] = b->lower(d);
+    bounds_[1][d] = b->upper(d);
   }
 }
 
-#endif /* P2TASK_H */
+#endif /* P3TASK_H */
 

@@ -26,95 +26,17 @@ You should have received a copy of the GNU General Public License along with thi
 
 extern std::atomic<int> ipcount;
 
-int P2Task::solve(Env & e, Problem & p, int * result, double * rhs) {
-
-  int cur_numcols, status, solnstat;
-  double objval;
-  double * srhs;
-  srhs = new double[p.objcnt];
-
-
-  for(int i = 0; i < p.objcnt; ++i)
-    srhs[i] = rhs[i];
-
-  cur_numcols = CPXXgetnumcols(e.env, e.lp);
-  bool * objectives_done = new bool[p.objcnt];
-  for(int i = 0; i < p.objcnt; ++i)
-    objectives_done[i] = false;
-
-  for (int pre_j = 0; pre_j < objCount_; pre_j++) {
-    int j = objectives_[pre_j];
-    objectives_done[j] = true;
-    status = CPXXchgobj(e.env, e.lp, cur_numcols, p.objind[j], p.objcoef[j]);
-    if (status) {
-      std::cerr << "Failed to set objective." << std::endl;
-    }
-
-    status = CPXXchgrhs (e.env, e.lp, p.objcnt, p.conind, srhs);
-    if (status) {
-      std::cerr << "Failed to change constraint srhs" << std::endl;
-    }
-
-    /* solve for current objective*/
-    status = CPXXmipopt (e.env, e.lp);
-    ipcount++;
-    if (status) {
-      std::cerr << "Failed to optimize LP." << std::endl;
-    }
-
-    solnstat = CPXgetstat (e.env, e.lp);
-    if ((solnstat == CPXMIP_INFEASIBLE) || (solnstat == CPXMIP_INForUNBD)) {
-       break;
-    }
-    status = CPXXgetobjval (e.env, e.lp, &objval);
-    if ( status ) {
-      std::cerr << "Failed to obtain objective value." << std::endl;
-      exit(0);
-    }
-    if ( objval > 1/p.mip_tolerance ) {
-      while (objval > 1/p.mip_tolerance) {
-        p.mip_tolerance /= 10;
-      }
-      CPXXsetdblparam(e.env, CPXPARAM_MIP_Tolerances_MIPGap, p.mip_tolerance);
-      status = CPXmipopt (e.env, e.lp);
-      ipcount++;
-      solnstat = CPXgetstat (e.env, e.lp);
-      if ((solnstat == CPXMIP_INFEASIBLE) || (solnstat == CPXMIP_INForUNBD)) {
-        break;
-      }
-      status = CPXXgetobjval (e.env, e.lp, &objval);
-      if ( status ) {
-        std::cerr << "Failed to obtain objective value." << std::endl;
-        exit(0);
-      }
-    }
-    result[j] = srhs[j] = round(objval);
-  }
-
-  // Get the solution vector
-  double * soln = new double[cur_numcols];
-  CPXgetx(e.env, e.lp, soln, 0, cur_numcols - 1);
-  // Now run through the rest of the objectives.
-  for (int j = 0; j < p.objcnt; j++) {
-    if (objectives_done[j])
-      continue;
-    double res = 0;
-    for(int i = 0; i < cur_numcols; ++i) {
-      res += p.objcoef[j][i] * soln[i];
-    }
-    result[j] = round(res);
-  }
-
-  delete[] srhs;
-
-  return solnstat;
-}
+#ifdef DEBUG
+extern std::mutex debug_mutex;
+#endif
 
 
 Status P2Task::operator()() {
   status_ = RUNNING;
 #ifdef DEBUG
+  debug_mutex.lock();
   std::cout << details();
+  debug_mutex.unlock();
 #endif
   Env e;
 
@@ -141,6 +63,43 @@ Status P2Task::operator()() {
   }
 
   Problem p(filename_.c_str(), e);
+  int cur_numcols = CPXgetnumcols(e.env, e.lp);
+  // Add our constraints
+  for(int d = 1 ; d < objCount_; ++d) {
+    int o = objectives_[d];
+    char sense[2] = "G";
+    CPXDIM ccnt = 0; // column added count
+    CPXDIM rcnt = 1; // row added count
+    CPXNNZ nzcnt = cur_numcols; // non-zero entries
+    CPXDIM * rmatind = new CPXDIM[cur_numcols];
+    for(int i = 0; i < cur_numcols; ++i) {
+      rmatind[i] = i;
+    }
+    CPXNNZ rmatbeg[1] { 0 };
+    const char* rowName[1];
+    std::stringstream rowString;
+    rowString << "Lower bound on " << o;
+    std::string str = rowString.str();
+    rowName[0] = str.c_str();
+    status = CPXXaddrows(e.env, e.lp, ccnt, rcnt, nzcnt,
+        &bounds_[0][d], // rhs
+        sense, rmatbeg, rmatind,
+        p.objcoef[o], // rmatval
+        NULL, // colname
+        NULL);
+
+    sense[0] = 'L';
+    rowString.str(std::string());
+    rowString << "Upper bound on " << o;
+    str = rowString.str();
+    rowName[0] = str.c_str();
+    status = CPXXaddrows(e.env, e.lp, ccnt, rcnt, nzcnt,
+        &bounds_[1][d], // rhs
+        sense, rmatbeg, rmatind,
+        p.objcoef[o], // rmatval
+        NULL, // colname
+        NULL);
+  }
 
 #ifdef FINETIMING
   double cplex_time = 0;
@@ -150,337 +109,82 @@ Status P2Task::operator()() {
   double total_time = start.tv_sec + start.tv_nsec/1e9;
 #endif
 
-  Solutions s(p.objcnt);
-  int infcnt;
-  bool inflast;
-  bool infeasible;
-  int * max, * min,  * result, *resultStore;
-  double * rhs;
-
-  result = resultStore = new int[p.objcnt];
-  rhs = new double[p.objcnt];
-  for(int i = 0; i < p.objcnt; ++i) {
-    rhs[i] = p.rhs[i];
+  int solnstat;
+  double * sol = new double[objCountTotal_];
+  int o = objectives_[obj_];
+  status = CPXXchgobj(e.env, e.lp, cur_numcols, p.objind[o], p.objcoef[o]);
+  if (status) {
+    std::cerr << "Failed to set objective." << std::endl;
   }
 
-  if (p.objsen == MIN) {
-    for (int i = 1; i < objCount_; ++i) {
-      int start = bounds_[1][i];
-      rhs[objectives_[i]] = start;
+
+  /* solve for current objective*/
+  status = CPXXmipopt (e.env, e.lp);
+  ipcount++;
+  if (status) {
+    std::cerr << "Failed to optimize LP." << std::endl;
+  }
+
+  solnstat = CPXgetstat (e.env, e.lp);
+  if ((solnstat == CPXMIP_INFEASIBLE) || (solnstat == CPXMIP_INForUNBD)) {
+    status_ = DONE;
+    return status_;
+  }
+  status = CPXXgetobjval (e.env, e.lp, &sol[o]);
+  if ( status ) {
+    std::cerr << "Failed to obtain objective value." << std::endl;
+    exit(0);
+  }
+  if ( sol[o]> 1/p.mip_tolerance ) {
+    while (sol[o] > 1/p.mip_tolerance) {
+      p.mip_tolerance /= 10;
     }
-  } else {
-    for (int i = 1; i < objCount_; ++i) {
-      int start = bounds_[0][i];
-      rhs[objectives_[i]] = start;
+    CPXXsetdblparam(e.env, CPXPARAM_MIP_Tolerances_MIPGap, p.mip_tolerance);
+    status = CPXmipopt (e.env, e.lp);
+    ipcount++;
+    solnstat = CPXgetstat (e.env, e.lp);
+    if ((solnstat == CPXMIP_INFEASIBLE) || (solnstat == CPXMIP_INForUNBD)) {
+      return status_ = DONE;
+    }
+    status = CPXXgetobjval (e.env, e.lp, &sol[o]);
+    if ( status ) {
+      std::cerr << "Failed to obtain objective value." << std::endl;
+      exit(0);
     }
   }
 
-#ifdef FINETIMING
-  clock_gettime(CLOCK_MONOTONIC, &start);
-  double starttime = (start.tv_sec + start.tv_nsec/1e9);
-#endif
-  int solnstat = solve(e, p, result, rhs);
-#ifdef FINETIMING
-  clock_gettime(CLOCK_MONOTONIC, &start);
-  cplex_time += (start.tv_sec + start.tv_nsec/1e9) - starttime;
-#endif
+  // Get the solution vector
+  double * soln = new double[cur_numcols];
+  CPXgetx(e.env, e.lp, soln, 0, cur_numcols - 1);
+  // Now run through the rest of the objectives.
+  for (int j = 0; j < objCountTotal_; j++) {
+    if (j == o)
+      continue;
+    double res = 0;
+    for(int i = 0; i < cur_numcols; ++i) {
+      res += p.objcoef[j][i] * soln[i];
+    }
+    sol[j] = round(res);
+  }
+
+  int * n = new int[objCountTotal_];
+  for (int i = 0; i < objCountTotal_; ++i) {
+    n[i] = round(sol[i]);
+  }
+  solutions_.push_back(n);
+
 #ifdef DEBUG
   debug_mutex.lock();
-  std::cout << *this << " with constraints ";
-  for(int i = 0; i < p.objcnt; ++i) {
-    if (rhs[i] > 1e09)
-      std::cout << "∞";
-    else if (rhs[i] < -1e09)
-      std::cout << "-∞";
-    else
-      std::cout << rhs[i];
-    std::cout << ",";
+  std::cout << "P2Task: found [";
+  for (int i = 0; i < objCountTotal_; ++i) {
+    if (i != 0)
+      std::cout << ", ";
+    std::cout << sol[i];
   }
-  std::cout << " found ";
-  if (solnstat == CPXMIP_INFEASIBLE) {
-    std::cout << "infeasible";
-  } else {
-    for(int i = 0; i < p.objcnt; ++i) {
-      std::cout << result[i] << ",";
-    }
-  }
+  std::cout << "]";
   std::cout << std::endl;
   debug_mutex.unlock();
 #endif
-  Sense sense = p.objsen;
-  /* Need to add a result to the list here*/
-  s.insert(rhs, result, solnstat == CPXMIP_INFEASIBLE);
-  // Note that if we are splitting, we aren't sharing.
-  min = new int[objCountTotal_];
-  max = new int[objCountTotal_];
-
-
-  if (solnstat != CPXMIP_INFEASIBLE) {
-    for (int j = 0; j < objCountTotal_; j++) {
-      min[j] = max[j] = result[j];
-    }
-  }
-  for (int objective_counter = 1; objective_counter < objCount_; objective_counter++) {
-    int objective = objectives_[objective_counter];
-    int depth_level = 1; /* Track current "recursion" depth */
-    int depth = objectives_[depth_level]; /* Track current "recursion" depth */
-    bool onwalk = false; /* Are we on the move? */
-    infcnt = 0; /* Infeasible count*/
-    inflast = false; /* Last iteration infeasible?*/
-
-
-    /* Set all constraints back to infinity*/
-    for (int j = 1; j < objCount_; ++j) {
-      if (sense == MIN) {
-        rhs[j] = CPX_INFBOUND;
-      } else {
-        rhs[j] = -CPX_INFBOUND;
-      }
-    }
-    if (sense == MIN) {
-      for (int i = 1; i < objCount_; ++i) {
-        int start = bounds_[1][i];
-        rhs[objectives_[i]] = start;
-      }
-    } else {
-      for (int i = 1; i < objCount_; ++i) {
-        int start = bounds_[0][i];
-        rhs[objectives_[i]] = start;
-      }
-    }
-    /* Set rhs of current depth */
-    if (sense == MIN) {
-      rhs[objective] = max[objective]-1;
-    } else {
-      rhs[objective] = min[objective]+1;
-    }
-
-    max[objective] = (int) -CPX_INFBOUND;
-    min[objective] = (int) CPX_INFBOUND;
-
-    while (infcnt < objective_counter) {
-      bool relaxed;
-      int solnstat;
-      /* Look for possible relaxations to the current problem*/
-      const Result *relaxation;
-
-#ifdef DEBUG_SOLUTION_SEARCH
-      debug_mutex.lock();
-      std::cout << "Thread " << *this;
-      debug_mutex.unlock();
-#endif
-      // First check if it's infeasible
-      relaxation = s.find(rhs, p.objsen);
-      relaxed = (relaxation != nullptr);
-      if (relaxed) {
-        infeasible = relaxation->infeasible;
-        result = relaxation->result;
-      } else {
-        /* Solve in the absence of a relaxation*/
-        result = resultStore;
-#ifdef FINETIMING
-        clock_gettime(CLOCK_MONOTONIC, &start);
-        double starttime = (start.tv_sec + start.tv_nsec/1e9);
-#endif
-        solnstat = solve(e, p, result, rhs);
-#ifdef FINETIMING
-        clock_gettime(CLOCK_MONOTONIC, &start);
-        cplex_time += (start.tv_sec + start.tv_nsec/1e9) - starttime;
-#endif
-        infeasible = ((solnstat == CPXMIP_INFEASIBLE) || (solnstat == CPXMIP_INForUNBD));
-        /* Store result */
-        s.insert(rhs, result, infeasible);
-      }
-#ifdef DEBUG
-      debug_mutex.lock();
-      std::cout << *this << " with constraints ";
-      for(int i = 0; i < p.objcnt; ++i) {
-        if (rhs[i] > 1e09)
-          std::cout << "∞";
-        else if (rhs[i] < -1e09)
-          std::cout << "-∞";
-        else
-          std::cout << rhs[i];
-        std::cout << ",";
-      }
-      std::cout << " found ";
-      if (relaxed)
-        std::cout << "relaxation ";
-      if (infeasible) {
-        std::cout << "infeasible." << std::endl;
-      } else {
-        for(int i = 0; i < p.objcnt; ++i) {
-          std::cout << result[i] << ",";
-        }
-        std::cout << std::endl;
-      }
-      debug_mutex.unlock();
-#endif
-      // See if we've gone past our boundary
-      if (!infeasible) {
-        if (sense == MIN) {
-          for (int i = 1; i < objCount_; ++i) {
-            int stop = bounds_[0][i];
-            if (rhs[objectives_[i]] < stop) {
-              infeasible = true;
-              break;
-            }
-          }
-        } else {
-          for (int i = 1; i < objCount_; ++i) {
-            int stop = bounds_[1][i];
-            if (rhs[objectives_[i]] > stop) {
-              infeasible = true;
-              break;
-            }
-          }
-        }
-      }
-      if (infeasible) {
-        infcnt++;
-        inflast = true;
-      } else {
-        infcnt = 0;
-        inflast = false;
-        /* Update maxima */
-        for (int j = 0; j < objCountTotal_; j++) {
-          if (result[j] > max[j]) {
-            max[j] = result[j];
-          }
-        }
-        /* Update minima */
-        for (int j = 0; j < objCountTotal_; j++) {
-          if (result[j] < min[j]) {
-            min[j] = result[j];
-          }
-        }
-      }
-
-      if (infeasible && (infcnt == objective_counter-1)) {
-        /* Set all constraints back to infinity */
-        for (int j = 0; j < objCountTotal_; j++) {
-          if (sense == MIN) {
-            rhs[j] = CPX_INFBOUND;
-          } else {
-            rhs[j] = -CPX_INFBOUND;
-          }
-        }
-        // Reset to start point, not to infinity, if we know the start point!
-        for(int i = 1; i < objCount_; ++i) {
-          if (sense == MIN) {
-            rhs[objectives_[i]] = bounds_[1][i];
-          } else {
-            rhs[objectives_[i]] = bounds_[0][i];
-          }
-        }
-        /* In the case of a minimisation problem
-         * set current level to max objective function value  -1 else set
-         * current level to min objective function value  +1 */
-        if (sense == MIN) {
-          if (max[objective] > (int) -CPX_INFBOUND) {
-            int start = (int)INF;
-            for(int i = 0; i < objCount_; ++i) {
-              if (objectives_[i] == objective) {
-                start = bounds_[1][i];
-              }
-            }
-            if (start < max[objective]-1) {
-              rhs[objective] = start;
-            } else {
-              rhs[objective] = max[objective]-1;
-            }
-            max[objective] = (int) -CPX_INFBOUND;
-          }
-        } else {
-          if (min[objective] < (int) CPX_INFBOUND) {
-            int start = -(int)INF;
-            for(int i = 0; i < objCount_; ++i) {
-              if (objectives_[i] == objective) {
-                start = bounds_[0][i];
-              }
-            }
-            if (start > min[objective]+1) {
-              rhs[objective] = start;
-            } else {
-              rhs[objective] = min[objective]+1;
-            }
-            min[objective] = (int) CPX_INFBOUND;
-          }
-        }
-
-        /* Reset depth */
-        depth_level = 1;
-        depth = objectives_[depth_level];
-        onwalk = false;
-      } else if (inflast && infcnt != objective_counter) {
-        if (sense == MIN) {
-          rhs[depth] = CPX_INFBOUND;
-        } else {
-          rhs[depth] = -CPX_INFBOUND;
-        }
-        // Reset to start point, not to infinity, if we know the start point!
-        for(int i = 1; i < objCount_; ++i) {
-          if (objectives_[i] == depth) {
-            if (sense == MIN) {
-              rhs[depth] = bounds_[1][i];
-            } else {
-              rhs[depth] = bounds_[0][i];
-            }
-          }
-        }
-        depth_level++;
-        depth = objectives_[depth_level];
-        if (sense == MIN) {
-          rhs[depth] = max[depth]-1;
-          max[depth] = (int) -CPX_INFBOUND;
-        } else {
-          rhs[depth] = min[depth]+1;
-          min[depth] = (int) CPX_INFBOUND;
-        }
-        onwalk = true;
-      } else if (!onwalk && infcnt != 1) {
-        if (sense == MIN) {
-          rhs[depth] = max[depth]-1;
-          max[depth] = (int) -CPX_INFBOUND;
-        } else {
-          rhs[depth] = min[depth]+1;
-          min[depth] = (int) CPX_INFBOUND;
-        }
-      } else if (onwalk && infcnt != 1)  {
-        depth_level = 1;
-        depth = objectives_[depth_level];
-        if (sense == MIN) {
-          rhs[depth] = max[depth]-1;
-          max[depth] = (int) -CPX_INFBOUND;
-        } else {
-          rhs[depth] = min[depth]+1;
-          min[depth] = (int) CPX_INFBOUND;
-        }
-        onwalk = false;
-      }
-    }
-  }
-#ifdef FINETIMING
-  clock_gettime(CLOCK_MONOTONIC, &start);
-  total_time = start.tv_sec + start.tv_nsec/1e9 - total_time;
-  std::cout << "Thread " << t->id << " used " << cplex_time << "s in cplex";
-  std::cout << ", waited for " << wait_time << "s";
-  std::cout << " and " << total_time << "s overall." << std::endl;
-#endif
-  delete[] resultStore;
-  delete[] rhs;
-  delete[] min;
-  delete[] max;
-
-  for(Result * r: s) {
-    if (r->infeasible)
-      continue;
-    int * n = new int[p.objcnt];
-    for (int i = 0; i < p.objcnt; ++i) {
-      n[i] = r->result[i];
-    }
-    solutions_.push_back(n);
-  }
   status_ = DONE;
   return status_;
 }

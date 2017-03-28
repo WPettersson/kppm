@@ -11,8 +11,8 @@ You should have received a copy of the GNU General Public License along with thi
 
 */
 
-#ifndef P2TASK_H
-#define P2TASK_H
+#ifndef P3CREATOR_H
+#define P3CREATOR_H
 
 #ifdef DEBUG
 #include <mutex>
@@ -21,32 +21,32 @@ You should have received a copy of the GNU General Public License along with thi
 #include "task.h"
 #include "env.h"
 #include "problem.h"
+#include "jobserver.h"
 
-class P2Task : public Task {
+class P3Creator : public Task {
   public:
-    P2Task(double **bound, std::string & filename, int objCount,
-        int objCountTotal, int * objectives, Sense sense);
+    P3Creator(std::string & filename, int objCount,
+        int objCountTotal, int * objectives, Sense sense, JobServer * taskServer);
     Status operator()();
 
+    void addNextLevel(Task * nextLevel);
 
     virtual std::string str() const;
     virtual std::string details() const;
   private:
-    double **bounds_;
-    int obj_;
+    JobServer * taskServer_;
+    std::list<Task *> nextLevel_;
 };
 
-inline P2Task::P2Task(double **bound, std::string & filename, int objCount,
-    int objCountTotal, int * objectives, Sense sense) :
-    Task(filename, objCount, objCountTotal, objectives, sense), obj_(0) {
-  bounds_ = new double*[2];
-  bounds_[0] = new double[objCount_];
-  bounds_[1] = new double[objCount_];
-  for (int d = 1; d < objCount_; ++d) {
-    bounds_[0][d] = bound[0][d];
-    bounds_[1][d] = bound[1][d];
-  }
+inline P3Creator::P3Creator(std::string & filename, int objCount,
+    int objCountTotal, int * objectives, Sense sense, JobServer * taskServer) :
+    Task(filename, objCount, objCountTotal, objectives, sense),
+    taskServer_(taskServer) {
 }
 
-#endif /* P2TASK_H */
+inline void P3Creator::addNextLevel(Task * nextLevel) {
+  nextLevel_.push_back(nextLevel);
+}
+
+#endif /* P3CREATOR_H */
 
