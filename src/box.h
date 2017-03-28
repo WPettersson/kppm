@@ -21,7 +21,7 @@ class BoxStore;
 
 class Box {
   public:
-    Box(double * upper, double * lower, int dim);
+    Box(double * upper, double * lower, int * objectives, int dim);
     ~Box();
     bool contains(int * s);
 
@@ -33,13 +33,16 @@ class Box {
   private:
     double * upper_;
     double * lower_;
+    int * objectives_;
     int dim_;
 };
 
-inline Box::Box(double * upper, double * lower, int dim) : dim_(dim) {
+inline Box::Box(double * upper, double * lower, int * objectives, int dim): dim_(dim) {
   upper_ = new double[dim_];
   lower_ = new double[dim_];
+  objectives_ = new int[dim_];
   for(int i = 0; i < dim_; ++i) {
+    objectives_[i] = objectives[i];
     upper_[i] = upper[i];
     lower_[i] = lower[i];
   }
@@ -48,13 +51,15 @@ inline Box::Box(double * upper, double * lower, int dim) : dim_(dim) {
 inline Box::~Box() {
   delete[] upper_;
   delete[] lower_;
+  delete[] objectives_;
 }
 
 inline bool Box::contains(int * s) {
   for(int i = 0; i < dim_; ++i) {
-    if (s[i] < lower_[i])
+    int o = objectives_[i];
+    if (s[o] < lower_[i])
       return false;
-    if (s[i] > upper_[i])
+    if (s[o] > upper_[i])
       return false;
   }
   return true;

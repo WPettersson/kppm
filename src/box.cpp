@@ -20,17 +20,25 @@ void Box::split(int * s, BoxStore & store) {
   double * lower = new double[this->dim_];
   double * upper = new double[this->dim_];
   for( int newBoxId = 1; newBoxId < (1 << dim_)-1; ++newBoxId) {
+    bool emptyBox = false;
     for( int d = 0; d < dim_; ++d) {
+      int o = objectives_[d];
       if ( (newBoxId & (1 << d)) != 0) {
         lower[d] = lower_[d];
-        upper[d] = s[d];
+        upper[d] = s[o];
+        if (lower[d] == upper[d])
+          emptyBox = true;
       } else {
-        lower[d] = s[d];
+        lower[d] = s[o];
         upper[d] = upper_[d];
+        if (lower[d] == upper[d])
+          emptyBox = true;
       }
     }
-    Box *b = new Box(upper, lower, dim_);
-    store.insert(b);
+    if (! emptyBox) {
+      Box *b = new Box(upper, lower, objectives_, dim_);
+      store.insert(b);
+    }
   }
   delete[] lower;
   delete[] upper;

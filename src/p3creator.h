@@ -26,7 +26,9 @@ You should have received a copy of the GNU General Public License along with thi
 class P3Creator : public Task {
   public:
     P3Creator(std::string & filename, int objCount,
-        int objCountTotal, int * objectives, Sense sense, JobServer * taskServer);
+        int objCountTotal, int * objectives, Sense sense,
+        double * lower, double * upper,
+        JobServer * taskServer);
     Status operator()();
 
     void addNextLevel(Task * nextLevel);
@@ -36,12 +38,23 @@ class P3Creator : public Task {
   private:
     JobServer * taskServer_;
     std::list<Task *> nextLevel_;
+
+    double * lower_;
+    double * upper_;
 };
 
 inline P3Creator::P3Creator(std::string & filename, int objCount,
-    int objCountTotal, int * objectives, Sense sense, JobServer * taskServer) :
+    int objCountTotal, int * objectives, Sense sense,
+    double * lower, double * upper,
+    JobServer * taskServer) :
     Task(filename, objCount, objCountTotal, objectives, sense),
     taskServer_(taskServer) {
+  lower_ = new double[objCount_];
+  upper_ = new double[objCount_];
+  for (int d = 0; d < objCount_; ++d) {
+    lower_[d] = lower[d];
+    upper_[d] = upper[d];
+  }
 }
 
 inline void P3Creator::addNextLevel(Task * nextLevel) {

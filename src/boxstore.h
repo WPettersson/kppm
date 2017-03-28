@@ -21,11 +21,12 @@ You should have received a copy of the GNU General Public License along with thi
 
 class BoxStore {
   public:
-    BoxStore(int dim, double * upper, double * lower);
+    BoxStore(int dim);
     ~BoxStore();
     Box * find(int * sol) const;
     void insert(Box * b);
     void remove(Box * b);
+    size_t size() const;
 
     std::list<Box *>::const_iterator begin() const;
     std::list<Box *>::const_iterator end() const;
@@ -36,26 +37,17 @@ class BoxStore {
 
 };
 
-inline BoxStore::BoxStore(int dim, double * upper, double * lower) :
+inline BoxStore::BoxStore(int dim) :
     dim_(dim) {
-  Box * b = new Box(upper, lower, dim_);
-  std::cout << "Creating " << b->str() << std::endl;
-  boxes_.push_back(b);
 }
 
 inline BoxStore::~BoxStore() {
   for(auto b: boxes_) {
-    std::cout << "Deleting " << b->str() << std::endl;
     delete b;
   }
 }
 
 inline Box * BoxStore::find(int * sol) const {
-  std::cout << "Searching for " << sol[0];
-  for(int i = 1; i < dim_; ++i) {
-    std::cout << ", " << sol[i];
-  }
-  std::cout << std::endl;
   for(auto b: boxes_) {
     if (b->contains(sol))
       return b;
@@ -72,12 +64,16 @@ inline void BoxStore::remove(Box * b) {
   delete b;
 }
 
+inline size_t BoxStore::size() const {
+  return boxes_.size();
+}
+
 inline std::list<Box *>::const_iterator BoxStore::begin() const {
   return boxes_.begin();
 }
 
 inline std::list<Box *>::const_iterator BoxStore::end() const {
-  return boxes_.begin();
+  return boxes_.end();
 }
 
 #endif /* BOXSTORE_H */

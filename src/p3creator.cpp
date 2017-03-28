@@ -30,77 +30,83 @@ extern std::mutex debug_mutex;
 
 Status P3Creator::operator()() {
   status_ = RUNNING;
+  gatherSolutions();
+  cleanSolutions();
 #ifdef DEBUG
   debug_mutex.lock();
   std::cout << details();
   debug_mutex.unlock();
 #endif
 
-  gatherSolutions();
-  cleanSolutions();
   std::vector<Task *> tasks;
-  double * lower = new double[objCount_];
-  double * upper = new double[objCount_];
   if (solutions().size() > 1) {
-    for (int i = 0; i < objCount_; ++i) {
-      lower[i] = INF;
-      upper[i] = -INF;
-    }
-    for(auto s: solutions()) {
-      for (int i = 0; i < objCount_; ++i) {
-        int o = objectives_[i];
-        if (s[o] < lower[i])
-          lower[i] = s[o];
-        if (s[o] > upper[i])
-          upper[i] = s[o];
-      }
-    }
 #ifdef DEBUG
     debug_mutex.lock();
-    std::cout << "Upper: " << upper[0];
+    std::cout << "Upper: " << upper_[0];
     for(int i = 1; i < objCount_; ++i) {
-      std::cout << ", " << upper[i];
+      std::cout << ", " << upper_[i];
     }
     std::cout << std::endl;
-    std::cout << "Lower: " << lower[0];
+    std::cout << "Lower: " << lower_[0];
     for(int i = 1; i < objCount_; ++i) {
-      std::cout << ", " << lower[i];
+      std::cout << ", " << lower_[i];
     }
     std::cout << std::endl;
     debug_mutex.unlock();
 #endif
-    BoxStore store(objCount_, upper, lower);
+    BoxStore store(objCount_);
+    store.insert(new Box(upper_, lower_, objectives_, objCount_));
     for(auto s: solutions()) {
       Box * b = store.find(s);
       if (b == nullptr) {
-        std::cerr << "Couldn't find solution inside box!!" << std::endl;
+        std::cerr << "Couldn't find [" << s[0];
+        for(int i = 1; i < objCount_; ++i) {
+          std::cerr << ", " << s[i];
+        }
+        std::cerr << "] inside box!!" << std::endl;
       } else {
+#ifdef DEBUG
+        debug_mutex.lock();
+        std::cout << "Sol [" << s[0];
+        for(int i = 1; i < objCount_; ++i) {
+          std::cout << ", " << s[i];
+        }
+        std::cout << "]" << std::endl;
+        std::cout << "Splitting box " << b->str() << std::endl;
+        debug_mutex.unlock();
+#endif
         b->split(s, store);
         store.remove(b);
       }
     }
-  } else {
-    for (int i = 0; i < objCount_; ++i) {
-      lower[i] = -INF;
-      upper[i] = INF;
+    for(auto b: store) {
+#ifdef DEBUG
+      debug_mutex.lock();
+      std::cout << "P3 task with box " << b->str() << std::endl;
+      debug_mutex.unlock();
+#endif
+      P3Task * p = new P3Task(b, filename_, objCount_, objCountTotal_, objectives_, sense_);
+      tasks.push_back(p);
     }
+  } else {
 #ifdef DEBUG
     debug_mutex.lock();
-    std::cout << "Upper: " << upper[0];
+    std::cout << "Upper: " << upper_[0];
     for(int i = 1; i < objCount_; ++i) {
-      std::cout << ", " << upper[i];
+      std::cout << ", " << upper_[i];
     }
     std::cout << std::endl;
-    std::cout << "Lower: " << lower[0];
+    std::cout << "Lower: " << lower_[0];
     for(int i = 1; i < objCount_; ++i) {
-      std::cout << ", " << lower[i];
+      std::cout << ", " << lower_[i];
     }
     std::cout << std::endl;
     debug_mutex.unlock();
 #endif
-    Box * b = new Box(upper, lower, objCount_);
+    Box * b = new Box(upper_, lower_, objectives_, objCount_);
     P3Task * p = new P3Task(b, filename_, objCount_, objCountTotal_, objectives_, sense_);
     tasks.push_back(p);
+    delete b;
   }
 
   for (auto n: nextLevel_) {
@@ -132,6 +138,6 @@ std::string P3Creator::details() const {
       ss << ", ";
     ss << objectives_[i];
   }
-  ss << "]" << std::endl;
+  ss << "] with " << solutions().size() << " solutions." << std::endl;
   return ss.str();
 }
