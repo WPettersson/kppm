@@ -18,7 +18,7 @@ all: executable
 
 executable: update-hash $(TARGETDIR)/kppm
 
-OBJS = $(TARGETDIR)/main.o $(TARGETDIR)/p1task.o $(TARGETDIR)/p2task.o $(TARGETDIR)/solutions.o $(TARGETDIR)/result.o $(TARGETDIR)/problem.o
+OBJS = $(TARGETDIR)/main.o $(TARGETDIR)/p1task.o $(TARGETDIR)/p2task.o $(TARGETDIR)/solutions.o $(TARGETDIR)/result.o $(TARGETDIR)/problem.o $(TARGETDIR)/p3task.o $(TARGETDIR)/p3creator.o $(TARGETDIR)/box.o
 
 $(TARGETDIR):
 	mkdir -p $(TARGETDIR)
@@ -53,3 +53,12 @@ $(TARGETDIR)/p1task.o: $(SRC)/p1task.h $(SRC)/p1task.cpp $(SRC)/task.h $(SRC)/jo
 
 $(TARGETDIR)/p2task.o: $(SRC)/p2task.h $(SRC)/p2task.cpp $(SRC)/task.h $(SRC)/jobserver.h
 	$(CXX) -c $(CFLAGS) -o $@ $(SRC)/p2task.cpp
+
+$(TARGETDIR)/p3task.o: $(SRC)/p3task.h $(SRC)/p3task.cpp $(SRC)/task.h $(SRC)/jobserver.h
+	$(CXX) -c $(CFLAGS) -o $@ $(SRC)/p3task.cpp
+
+$(TARGETDIR)/p3creator.o: $(SRC)/p3creator.h $(SRC)/p3creator.cpp $(SRC)/task.h $(SRC)/jobserver.h
+	$(CXX) -c $(CFLAGS) -o $@ $(SRC)/p3creator.cpp
+
+$(TARGETDIR)/box.o: $(SRC)/box.h $(SRC)/box.cpp $(SRC)/boxstore.h
+	$(CXX) -c $(CFLAGS) -o $@ $(SRC)/box.cpp
