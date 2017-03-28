@@ -22,7 +22,6 @@ You should have received a copy of the GNU General Public License along with thi
 
 #include <boost/program_options.hpp>
 
-#include "hash.h"
 #include "gather.h"
 #include "jobserver.h"
 #include "p1task.h"
@@ -33,7 +32,7 @@ You should have received a copy of the GNU General Public License along with thi
 
 
 namespace po = boost::program_options;
-
+extern std::string HASH;
 #ifdef DEBUG
 std::mutex debug_mutex;
 #endif
