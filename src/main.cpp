@@ -81,6 +81,7 @@ int main(int argc, char* argv[]) {
 
   if (v.count("help")) {
     // usage();
+    std::cout << "k-PPM at " << HASH << std::endl;
     std::cout << opt << std::endl;
     return(1);
   }
