@@ -328,7 +328,7 @@ Status P3Task::operator()() {
         if (sense == MIN) {
           for (int i = 1; i < objCount_; ++i) {
             double stop = bounds_[0][i];
-            if (rhs[objectives_[i]] < stop) {
+            if (rhs[objectives_[i]] <= stop) {
               infeasible = true;
               break;
             }
@@ -336,11 +336,33 @@ Status P3Task::operator()() {
         } else {
           for (int i = 1; i < objCount_; ++i) {
             double stop = bounds_[1][i];
-            if (rhs[objectives_[i]] > stop) {
+            if (rhs[objectives_[i]] >= stop) {
               infeasible = true;
               break;
             }
           }
+        }
+        // Alternatively, check if all results are past the boundary
+        bool allPast = true;
+        if (sense == MIN) {
+          for (int i = 1; i < objCount_; ++i) {
+            double stop = bounds_[0][i];
+            if (result[objectives_[i]] > stop) {
+              allPast = false;
+              break;
+            }
+          }
+        } else {
+          for (int i = 1; i < objCount_; ++i) {
+            double stop = bounds_[1][i];
+            if (rhs[objectives_[i]] < stop) {
+              allPast = false;
+              break;
+            }
+          }
+        }
+        if (allPast) {
+          infeasible = true;
         }
       }
       if (infeasible) {
