@@ -55,6 +55,10 @@ Status P3Creator::operator()() {
     debug_mutex.unlock();
 #endif
     BoxStore store(objCount_);
+    Solutions * s = nullptr;
+    if (shareSolns_) {
+      s = new Solutions(objCountTotal_);
+    }
     store.insert(new Box(upper_, lower_, objectives_, objCount_));
     for(auto s: solutions()) {
       Box * b = store.find(s);
@@ -85,7 +89,7 @@ Status P3Creator::operator()() {
       std::cout << "P3 task with box " << b->str() << std::endl;
       debug_mutex.unlock();
 #endif
-      P3Task * p = new P3Task(b, filename_, objCount_, objCountTotal_, objectives_, sense_);
+      P3Task * p = new P3Task(b, filename_, objCount_, objCountTotal_, objectives_, sense_, s);
       tasks.push_back(p);
     }
   } else {

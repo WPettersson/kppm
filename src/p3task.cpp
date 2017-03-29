@@ -283,20 +283,30 @@ Status P3Task::operator()() {
         infeasible = relaxation->infeasible;
         result = relaxation->result;
       } else {
-        /* Solve in the absence of a relaxation*/
-        result = resultStore;
+        if (all_)
+          relaxation = all_->find(rhs, p.objsen);
+        if (relaxation != nullptr) {
+          result = relaxation->result;
+          infeasible = relaxation->infeasible;
+          s.insert(relaxation);
+        } else {
+          /* Solve in the absence of a relaxation*/
+          result = resultStore;
 #ifdef FINETIMING
-        clock_gettime(CLOCK_MONOTONIC, &start);
-        double starttime = (start.tv_sec + start.tv_nsec/1e9);
+          clock_gettime(CLOCK_MONOTONIC, &start);
+          double starttime = (start.tv_sec + start.tv_nsec/1e9);
 #endif
-        solnstat = solve(e, p, result, rhs);
+          solnstat = solve(e, p, result, rhs);
 #ifdef FINETIMING
-        clock_gettime(CLOCK_MONOTONIC, &start);
-        cplex_time += (start.tv_sec + start.tv_nsec/1e9) - starttime;
+          clock_gettime(CLOCK_MONOTONIC, &start);
+          cplex_time += (start.tv_sec + start.tv_nsec/1e9) - starttime;
 #endif
-        infeasible = ((solnstat == CPXMIP_INFEASIBLE) || (solnstat == CPXMIP_INForUNBD));
-        /* Store result */
-        s.insert(rhs, result, infeasible);
+          infeasible = ((solnstat == CPXMIP_INFEASIBLE) || (solnstat == CPXMIP_INForUNBD));
+          /* Store result */
+          s.insert(rhs, result, infeasible);
+          if (all_)
+            all_->insert(rhs, result, infeasible);
+        }
       }
 #ifdef DEBUG
       debug_mutex.lock();

@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
   std::string pFilename, outputFilename;
 
   int numSteps;
-
+  bool shareSolns;
   /* Timing */
   clock_t starttime, endtime;
   double cpu_time_used, elapsedtime, startelapsed;
@@ -71,6 +71,9 @@ int main(int argc, char* argv[]) {
     ("steps,s",
       po::value<int>(&numSteps)->default_value(1),
      "Number of steps to take along each objective function when splitting up the search space. Optional, default to 1.")
+    ("share,r",
+     po::bool_switch(&shareSolns),
+     "Share solutions (and relaxations) across divisions of the solution space.")
   ;
 
   po::store(po::parse_command_line(argc, argv, opt), v);
@@ -125,7 +128,8 @@ int main(int argc, char* argv[]) {
         numAdded++;
       }
     }
-    P1Task *t = new P1Task(pFilename, numAdded, p.objcnt, p.objsen, objectives, numSteps, &server);
+    P1Task *t = new P1Task(pFilename, numAdded, p.objcnt, p.objsen, objectives,
+        numSteps, shareSolns, &server);
     allTasks[numAdded-1]->push_back(t);
     addPreReqs.push(t);
   }

@@ -26,6 +26,7 @@ class Solutions {
     ~Solutions();
     const Result * find(const double *ip, const Sense sense) const;
     void insert(const double *lp, const int *result, const bool infeasible);
+    void insert(const Result *r);
     void merge(Solutions& other);
     void sort();
 

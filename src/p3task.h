@@ -22,11 +22,12 @@ You should have received a copy of the GNU General Public License along with thi
 #include "task.h"
 #include "env.h"
 #include "problem.h"
+#include "solutions.h"
 
 class P3Task : public Task {
   public:
-    P3Task(Box * b, std::string & filename, int objCount,
-        int objCountTotal, int * objectives, Sense sense);
+    P3Task(Box * b, std::string & filename, int objCount, int objCountTotal,
+        int * objectives, Sense sense, Solutions * all = nullptr);
     ~P3Task();
     Status operator()();
 
@@ -36,11 +37,13 @@ class P3Task : public Task {
   private:
     int solve(Env & e, Problem & p, int * result, double * rhs);
     double **bounds_;
+
+    Solutions * all_;
 };
 
 inline P3Task::P3Task(Box * b, std::string & filename, int objCount,
-    int objCountTotal, int * objectives, Sense sense) :
-    Task(filename, objCount, objCountTotal, objectives, sense) {
+    int objCountTotal, int * objectives, Sense sense, Solutions * all) :
+    Task(filename, objCount, objCountTotal, objectives, sense), all_(all) {
   bounds_ = new double*[2];
   bounds_[0] = new double[objCount_];
   bounds_[1] = new double[objCount_];

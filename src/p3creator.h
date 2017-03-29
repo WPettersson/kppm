@@ -27,7 +27,7 @@ class P3Creator : public Task {
   public:
     P3Creator(std::string & filename, int objCount,
         int objCountTotal, int * objectives, Sense sense,
-        double * lower, double * upper,
+        bool shareSolns, double * lower, double * upper,
         JobServer * taskServer);
     Status operator()();
 
@@ -39,16 +39,17 @@ class P3Creator : public Task {
     JobServer * taskServer_;
     std::list<Task *> nextLevel_;
 
+    bool shareSolns_;
     double * lower_;
     double * upper_;
 };
 
 inline P3Creator::P3Creator(std::string & filename, int objCount,
-    int objCountTotal, int * objectives, Sense sense,
+    int objCountTotal, int * objectives, Sense sense, bool shareSolns,
     double * lower, double * upper,
     JobServer * taskServer) :
     Task(filename, objCount, objCountTotal, objectives, sense),
-    taskServer_(taskServer) {
+    taskServer_(taskServer), shareSolns_(shareSolns) {
   lower_ = new double[objCount_];
   upper_ = new double[objCount_];
   for (int d = 0; d < objCount_; ++d) {

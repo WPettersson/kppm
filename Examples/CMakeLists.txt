@@ -11,4 +11,9 @@ FOREACH(TESTFILE ${TESTS})
     $<TARGET_FILE:kppm>
     "${TESTFILE}"
     "-t 2 -s 2")
+  ADD_TEST(NAME "${TESTNAME}-2-threads-sharing" COMMAND
+    "${PROJECT_SOURCE_DIR}/scripts/checkResults.sh"
+    $<TARGET_FILE:kppm>
+    "${TESTFILE}"
+    "-t 2 -s 2 -r")
 ENDFOREACH(TESTFILE)

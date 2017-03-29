@@ -113,6 +113,26 @@ void Solutions::insert(const double *lp, const int *result,
   store_.push_back(r);
 }
 
+void Solutions::insert(const Result *otherR) {
+  Result * r = new Result;
+  r->objective_count = objective_count;
+  r->ip = new double[objective_count];
+  for (int i = 0; i < objective_count; ++i) {
+    r->ip[i] = otherR->ip[i];
+  }
+  if (otherR->infeasible) {
+    r->infeasible = true;
+    r->result = nullptr;
+  } else {
+    r->infeasible = false;
+    r->result = new int[objective_count];
+    for (int i = 0; i < objective_count; ++i) {
+      r->result[i] = otherR->result[i];
+    }
+  }
+  store_.push_back(r);
+}
+
 Solutions::~Solutions() {
   for(auto r: store_) {
     delete[] r->ip;

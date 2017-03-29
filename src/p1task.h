@@ -26,7 +26,7 @@ class P2Task;
 class P1Task: public Task {
   public:
     P1Task(std::string & problem, int objCount, int objCountTotal, Sense sense,
-        int * objectives, int numSteps, JobServer *taskServer);
+        int * objectives, int numSteps, bool shareSolns, JobServer *taskServer);
 
     void addNextLevel(Task * nextLevel);
     Status operator()();
@@ -43,15 +43,17 @@ class P1Task: public Task {
      */
     int numSteps_;
 
+    bool shareSolns_;
 
     JobServer * taskServer_;
     std::list<Task *> nextLevel_;
 };
 
 inline P1Task::P1Task(std::string & filename, int objCount, int objCountTotal,
-    Sense sense, int * objectives, int numSteps, JobServer *taskServer) :
+    Sense sense, int * objectives, int numSteps, bool shareSolns,
+    JobServer *taskServer) :
     Task(filename, objCount, objCountTotal, objectives, sense),
-    numSteps_(numSteps), taskServer_(taskServer) {
+    numSteps_(numSteps), shareSolns_(shareSolns), taskServer_(taskServer) {
 
 }
 

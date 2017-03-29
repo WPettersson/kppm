@@ -130,7 +130,7 @@ Status P1Task::operator()() {
       tasks.push_back(p);
     }
     P3Creator * p3c = new P3Creator(filename_, objCount_, objCountTotal_,
-        objectives_, sense_, minOverall, maxOverall, taskServer_);
+        objectives_, sense_, shareSolns_, minOverall, maxOverall, taskServer_);
     for (auto n: nextLevel_) {
       n->addPreReq(p3c);
       p3c->addNextLevel(n);
