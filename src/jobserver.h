@@ -31,6 +31,7 @@ freely, subject to the following restrictions:
 
 #include <algorithm>
 #include <future>
+#include <functional>
 #include <vector>
 #include <mutex>
 #include <condition_variable>
